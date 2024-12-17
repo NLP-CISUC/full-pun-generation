@@ -5,6 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
+    "gensim>=4.3.3",
     "gradio>=4.44.1",
     "keybert>=0.8.5",
     "nltk>=3.9.1",
