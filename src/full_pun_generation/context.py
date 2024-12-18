@@ -32,15 +32,17 @@ def pos_tagging(text):
 
 def extract_keywords(text, n_keywords=5):
     logging.info(f'Extracting {n_keywords} keywords')
+
+    text = text[:512] # Truncate text because of PoS model
     logging.info(f'Input text: {text}')
 
     pos_tags = pos_tagging(text)
-    stop_words = [word.lower() for word, tag in pos_tags
-                  if tag not in ['NOUN', 'PROPN', 'ADJ', 'VERB', 'ADV']]
+    stop_words = {word.lower() for word, tag in pos_tags
+                  if tag not in ['NOUN', 'PROPN', 'ADJ', 'VERB', 'ADV']}
     logging.info(f'Stopwords: {stop_words}')
 
     keywords = kw_model.extract_keywords(text, top_n=n_keywords,
-                                         stop_words=stop_words)
+                                         stop_words=list(stop_words))
     logging.info(f'Keywords: {keywords}')
     return keywords
 
