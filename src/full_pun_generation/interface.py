@@ -2,7 +2,8 @@ import logging
 
 import gradio as gr
 
-from .context import extract_keywords, expand_keywords
+from .context import expand_keywords, extract_keywords
+from .pronunciation import get_pronunciation
 from .wordnet import get_ambiguous_words
 
 logging.basicConfig(level=logging.INFO,
@@ -17,6 +18,7 @@ def get_signs(text, n_keywords=5):
     words = {kw for kw, _ in expanded_keywords}
 
     homographic_signs = get_ambiguous_words(words)
+    homophonic_signs = get_pronunciation(words)
     return '\n'.join([str(w) for w, _ in homographic_signs])
 
 def create_interface():
