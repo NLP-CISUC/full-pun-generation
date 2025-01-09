@@ -3,7 +3,7 @@ import logging
 import gradio as gr
 
 from .context import expand_keywords, extract_keywords
-from .pronunciation import get_pronunciation
+from .pronunciation import get_pronunciation, phoneme_to_grapheme
 from .wordnet import get_ambiguous_words
 
 logging.basicConfig(level=logging.INFO,
@@ -18,15 +18,18 @@ def get_signs(text, n_keywords=5):
     words = {kw for kw, _ in expanded_keywords}
 
     homographic_signs = get_ambiguous_words(words)
-    homophonic_signs = get_pronunciation(words)
-    return '\n'.join([str(w) for w, _ in homographic_signs])
+    graphemes = [phoneme_to_grapheme(pron) for pron in get_pronunciation(words)]
+    homophonic_signs = [g for g in graphemes if len(g) > 1]
+    return ['\n'.join([str(w) for w, _ in homographic_signs]),
+            '\n'.join([str(g) for g in homophonic_signs])]
 
 def create_interface():
     iface = gr.Interface(
             fn=get_signs,
             inputs=[gr.Textbox(lines=10, label='Input text'),
                     gr.Number(value=5, label='Number of keywords')],
-            outputs=gr.Textbox(label='Homographic signs'),
+            outputs=[gr.Textbox(label='Homographic signs'),
+                     gr.Textbox(label='Homophonic signs')],
             title='Pun Generation',
             description='Generate pun based on input text',
             theme='huggingface')

@@ -5,6 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
+    "full-pun-generation",
     "gensim>=4.3.3",
     "gradio>=4.44.1",
     "keybert>=0.8.5",
@@ -24,4 +25,8 @@ build-backend = "hatchling.build"
 [tool.uv]
 dev-dependencies = [
     "pip>=24.3.1",
+    "tqdm>=4.67.1",
 ]
+
+[tool.uv.sources]
+full-pun-generation = { workspace = true }

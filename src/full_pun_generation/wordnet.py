@@ -17,10 +17,10 @@ def get_ambiguous_words(words):
         if min_similarity < 0.2:
             ambiguous_words.add((w, min_similarity))
     ambiguous_words = sorted(ambiguous_words, key=lambda x: x[1])
-    logging.info(f'Ambiguous words: {ambiguous_words}')
     return ambiguous_words
 
 def get_definitions_similarity(synsets):
+    logging.info(f'Calculating similarity between definitions of {synsets}')
     definitions = [s.definition() for s in synsets]
     embeddings = sts_model.encode(definitions)
     min_similarity = sts_model.similarity(embeddings, embeddings).min()
