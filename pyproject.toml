@@ -17,6 +17,7 @@ dependencies = [
 
 [project.scripts]
 gradio = "full_pun_generation.interface:main"
+pronunciation = "full_pun_generation.pronunciation:main"
 
 [build-system]
 requires = ["hatchling"]

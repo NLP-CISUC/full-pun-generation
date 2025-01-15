@@ -26,3 +26,6 @@ def get_definitions_similarity(synsets):
     min_similarity = sts_model.similarity(embeddings, embeddings).min()
     return min_similarity
 
+def get_valid_words(words):
+    return [w for w in words if w in wn.words(lang='por')]
+

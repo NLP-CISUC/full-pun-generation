@@ -4,7 +4,7 @@ import gradio as gr
 
 from .context import expand_keywords, extract_keywords
 from .pronunciation import get_pronunciation, phoneme_to_grapheme
-from .wordnet import get_ambiguous_words
+from .wordnet import get_ambiguous_words, get_valid_words
 
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(levelname)s: %(message)s',
@@ -18,7 +18,9 @@ def get_signs(text, n_keywords=5):
     words = {kw for kw, _ in expanded_keywords}
 
     homographic_signs = get_ambiguous_words(words)
-    graphemes = [phoneme_to_grapheme(pron) for pron in get_pronunciation(words)]
+    graphemes = [phoneme_to_grapheme(pron)[1] for pron in get_pronunciation(words)]
+    graphemes = [get_valid_words(g) for g in graphemes]
+    logging.info(f'Generated graphemes: {graphemes}')
     homophonic_signs = [g for g in graphemes if len(g) > 1]
     return ['\n'.join([str(w) for w, _ in homographic_signs]),
             '\n'.join([str(g) for g in homophonic_signs])]
