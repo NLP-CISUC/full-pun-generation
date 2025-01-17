@@ -1,3 +1,4 @@
+import json
 from argparse import ArgumentParser
 from pathlib import Path
 
@@ -25,8 +26,19 @@ parser.add_argument(
         type=str,
         default="unicamp-dl/ptt5-base-portuguese-vocab",
         )
+parser.add_argument(
+        "--no_train",
+        action="store_true",
+        help="Do not train the model",
+        required=False,
+        )
+parser.add_argument(
+        "--no_test",
+        action="store_true",
+        help="Do not test the model",
+        required=False,
+        )
 args = parser.parse_args()
-
 
 def update_signs(row):
     if not row["homograph"]:
@@ -75,6 +87,7 @@ puntuguese = (
 hf_puntuguese = load_dataset("Superar/Puntuguese")
 train_id = [id_[:-2] for id_ in hf_puntuguese["train"]["id"] if id_.endswith("H")]
 eval_id = [id_[:-2] for id_ in hf_puntuguese["validation"]["id"] if id_.endswith("H")]
+test_id = [id_[:-2] for id_ in hf_puntuguese["test"]["id"] if id_.endswith("H")]
 
 task_preffix = "Criar trocadilho"
 inputs = puntuguese.select(
@@ -94,20 +107,29 @@ inputs = puntuguese.select(
         )
 train_inputs = inputs.filter(pl.col("id").is_in(train_id))
 eval_inputs = inputs.filter(pl.col("id").is_in(eval_id))
+test_inputs = inputs.filter(pl.col("id").is_in(test_id))
 
-tokenizer = T5Tokenizer.from_pretrained(args.model_name)
+if not args.no_train:
+    tokenizer = T5Tokenizer.from_pretrained(args.model_name)
+else:
+    json_file = open(args.model_name + "/config.json")
+    config = json.load(json_file)
+    json_file.close()
+    tokenizer = T5Tokenizer.from_pretrained(config["_name_or_path"])
 tokenizer.pad_token = tokenizer.eos_token
 tokenized_train = tokenizer(
         train_inputs["command"].to_list(),
         truncation=True,
         padding="max_length",
         max_length=128,
+        return_tensors="pt",
         )
 tokenized_train["labels"] = tokenizer(
         train_inputs["label"].to_list(),
         truncation=True,
         padding="max_length",
-        max_length=128
+        max_length=128,
+        return_tensors="pt",
         )["input_ids"]
 dataset_train = Dataset.from_dict(tokenized_train)
 
@@ -116,29 +138,55 @@ tokenized_eval = tokenizer(
         truncation=True,
         padding="max_length",
         max_length=128,
+        return_tensors="pt",
         )
 tokenized_eval["labels"] = tokenizer(
         eval_inputs["label"].to_list(),
         truncation=True,
         padding="max_length",
-        max_length=128
+        max_length=128,
+        return_tensors="pt",
         )["input_ids"]
 dataset_eval = Dataset.from_dict(tokenized_eval)
 
+tokenized_test = tokenizer(
+        test_inputs["command"].to_list(),
+        truncation=True,
+        padding="max_length",
+        max_length=128,
+        return_tensors="pt",
+        )
+tokenized_test["labels"] = tokenizer(
+        test_inputs["label"].to_list(),
+        truncation=True,
+        padding="max_length",
+        max_length=128,
+        return_tensors="pt",
+        )["input_ids"]
+dataset_test = Dataset.from_dict(tokenized_test)
+
 model = T5ForConditionalGeneration.from_pretrained(args.model_name)
-data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False)
-training_args = TrainingArguments(
-        output_dir="results/models",
-        overwrite_output_dir=True,
-        num_train_epochs=4,
-        learning_rate=1e-4,
-        save_total_limit=1,
-        )
-trainer = Trainer(
-        model=model,
-        args=training_args,
-        train_dataset=dataset_train,
-        eval_dataset=dataset_eval,
-        data_collator=data_collator,
-        )
-trainer.train()
+
+if not args.no_train:
+    data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False)
+    training_args = TrainingArguments(
+            output_dir="results/models",
+            overwrite_output_dir=True,
+            num_train_epochs=10,
+            learning_rate=1e-4,
+            save_total_limit=1,
+            eval_steps=10,
+            )
+    trainer = Trainer(
+            model=model,
+            args=training_args,
+            train_dataset=dataset_train,
+            eval_dataset=dataset_eval,
+            data_collator=data_collator,
+            )
+    trainer.train()
+
+if not args.no_test:
+    output = model.generate(**tokenized_train)
+    output = tokenizer.batch_decode(output, skip_special_tokens=True)
+    print(output)
