@@ -5,19 +5,29 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
+    "datasets>=3.2.0",
+    "editdistance>=0.8.1",
     "full-pun-generation",
     "gensim>=4.3.3",
     "gradio>=4.44.1",
+    "huggingface-hub>=0.27.0",
     "keybert>=0.8.5",
     "nltk>=3.9.1",
     "phonemizer>=3.3.0",
+    "polars>=1.19.0",
+    "protobuf>=5.29.3",
     "sentence-transformers>=3.3.1",
-    "spacy>=3.8.3",
+    "sentencepiece>=0.2.0",
+    "spacy==3.8.3",
+    "tiktoken>=0.8.0",
+    "torch>=2.5.1",
+    "transformers[torch]>=4.47.0",
 ]
 
 [project.scripts]
 gradio = "full_pun_generation.interface:main"
 pronunciation = "full_pun_generation.pronunciation:main"
+test-wordnet = "full_pun_generation.wordnet:test"
 
 [build-system]
 requires = ["hatchling"]

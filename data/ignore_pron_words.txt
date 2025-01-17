@@ -96,6 +96,7 @@ cc
 ccb
 ccp
 ccpm
+champollion
 ccrn
 cd
 cdb
@@ -107,7 +108,6 @@ cfm
 cgd
 cgtp
 chahine
-champollion
 chevette
 christo
 cj
@@ -116,7 +116,6 @@ cml
 cmn
 cmn
 cmr
-cmtv
 cmvf
 cn
 cncdp
