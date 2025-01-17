@@ -2,7 +2,7 @@ from argparse import ArgumentParser
 from pathlib import Path
 
 import polars as pl
-from datasets import Dataset
+from datasets import Dataset, load_dataset
 from full_pun_generation.wordnet import get_definitions_similarity
 from nltk.corpus import wordnet as wn
 from transformers import (DataCollatorForLanguageModeling,
@@ -64,6 +64,7 @@ puntuguese = (
                       .alias("updated signs")
                       )
         .select(
+            pl.col("id"),
             pl.col("text"),
             pl.col("updated signs").struct.field("pun sign"),
             pl.col("updated signs").struct.field("alternative sign"),
@@ -71,9 +72,14 @@ puntuguese = (
         .filter(pl.col("pun sign") != "")  # Ignore homographs that are not in WordNet
         )
 
+hf_puntuguese = load_dataset("Superar/Puntuguese")
+train_id = [id_[:-2] for id_ in hf_puntuguese["train"]["id"] if id_.endswith("H")]
+eval_id = [id_[:-2] for id_ in hf_puntuguese["validation"]["id"] if id_.endswith("H")]
+
 task_preffix = "Criar trocadilho"
 inputs = puntuguese.select(
         [
+            pl.col("id"),
             pl.concat_str(
                 [
                     pl.lit(task_preffix),
@@ -86,20 +92,38 @@ inputs = puntuguese.select(
             pl.col("text").alias("label"),
             ]
         )
+train_inputs = inputs.filter(pl.col("id").is_in(train_id))
+eval_inputs = inputs.filter(pl.col("id").is_in(eval_id))
 
 tokenizer = T5Tokenizer.from_pretrained(args.model_name)
 tokenizer.pad_token = tokenizer.eos_token
-tokenized_input = tokenizer(
-        inputs["command"].to_list(),
+tokenized_train = tokenizer(
+        train_inputs["command"].to_list(),
         truncation=True,
         padding="max_length",
         max_length=128,
         )
-tokenized_labels = tokenizer(
-        inputs["label"].to_list(), truncation=True, padding="max_length", max_length=128
+tokenized_train["labels"] = tokenizer(
+        train_inputs["label"].to_list(),
+        truncation=True,
+        padding="max_length",
+        max_length=128
+        )["input_ids"]
+dataset_train = Dataset.from_dict(tokenized_train)
+
+tokenized_eval = tokenizer(
+        eval_inputs["command"].to_list(),
+        truncation=True,
+        padding="max_length",
+        max_length=128,
         )
-tokenized_input["labels"] = tokenized_labels["input_ids"]
-dataset = Dataset.from_dict(tokenized_input)
+tokenized_eval["labels"] = tokenizer(
+        eval_inputs["label"].to_list(),
+        truncation=True,
+        padding="max_length",
+        max_length=128
+        )["input_ids"]
+dataset_eval = Dataset.from_dict(tokenized_eval)
 
 model = T5ForConditionalGeneration.from_pretrained(args.model_name)
 data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False)
@@ -108,12 +132,13 @@ training_args = TrainingArguments(
         overwrite_output_dir=True,
         num_train_epochs=4,
         learning_rate=1e-4,
-        save_total_limit=2,
+        save_total_limit=1,
         )
 trainer = Trainer(
         model=model,
         args=training_args,
-        train_dataset=dataset,
+        train_dataset=dataset_train,
+        eval_dataset=dataset_eval,
         data_collator=data_collator,
         )
 trainer.train()
