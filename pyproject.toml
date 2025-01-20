@@ -35,6 +35,7 @@ build-backend = "hatchling.build"
 
 [tool.uv]
 dev-dependencies = [
+    "autopep8>=2.3.2",
     "pip>=24.3.1",
     "tqdm>=4.67.1",
 ]

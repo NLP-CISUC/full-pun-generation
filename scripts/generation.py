@@ -76,36 +76,41 @@ puntuguese = (
     .filter(pl.col("homograph") | pl.col("homophone"))
 )
 
+# Substitute homographs by their definitions from WordNet
 task_preffix = "Criar trocadilho"
-inputs = puntuguese.with_columns(  # Substitute homographs by their definitions from WordNet
-    pl.struct(["pun sign", "alternative sign", "homograph"])
-    .map_elements(
-        update_signs,
-        return_dtype=pl.Struct(
-            [
-                pl.Field("pun sign", pl.String),
-                pl.Field("alternative sign", pl.String),
-            ]
-        ),
-    )
-    .alias("updated signs")).select(
-    pl.col("id"),
-    pl.col("text"),
-    pl.col("updated signs").struct.field("pun sign"),
-    pl.col("updated signs").struct.field("alternative sign")).filter(pl.col("pun sign") != "").select(
-    [
+inputs = (
+    puntuguese.with_columns(
+        pl.struct(["pun sign", "alternative sign", "homograph"])
+        .map_elements(
+            update_signs,
+            return_dtype=pl.Struct(
+                [
+                    pl.Field("pun sign", pl.String),
+                    pl.Field("alternative sign", pl.String),
+                ]
+            ),
+        )
+        .alias("updated signs")).select(
         pl.col("id"),
-        pl.concat_str(
-            [
-                pl.lit(task_preffix),
-                pl.concat_str(
-                    [pl.col("pun sign"), pl.col("alternative sign")], separator="/"
-                ),
-            ],
-            separator=": ",
-        ).alias("command"),
-        pl.col("text").alias("label"),
-    ]
+        pl.col("text"),
+        pl.col("updated signs").struct.field("pun sign"),
+        pl.col("updated signs").struct.field("alternative sign"))
+    .filter(pl.col("pun sign") != "")
+    .select(
+        [
+            pl.col("id"),
+            pl.concat_str(
+                [
+                    pl.lit(task_preffix),
+                    pl.concat_str(
+                        [pl.col("pun sign"), pl.col("alternative sign")], separator="/"
+                    ),
+                ],
+                separator=": ",
+            ).alias("command"),
+            pl.col("text").alias("label"),
+        ]
+    )
 )
 
 # Load tokenizer
@@ -177,8 +182,12 @@ if not args.no_test:
                                 attention_mask=attention_mask,
                                 do_sample=True,
                                 temperature=1.0)
-        test_df = test_df.with_columns(pl.Series("prediction", tokenizer.batch_decode(output, skip_special_tokens=True)))
-    test_df = test_df.select(pl.col(["id", "homograph", "homophone", "pun sign", "alternative sign", "label", "prediction"]))
+        test_df = test_df.with_columns(pl.Series(
+            "prediction", tokenizer.batch_decode(output, skip_special_tokens=True)))
+    test_df = test_df.select(
+        pl.col(["id", "homograph", "homophone", "pun sign",
+               "alternative sign", "label", "prediction"])
+    )
 
     if args.output:
         args.output.parent.mkdir(parents=True, exist_ok=True)
