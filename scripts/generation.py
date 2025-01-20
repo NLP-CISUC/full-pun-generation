@@ -7,46 +7,55 @@ import torch
 from datasets import Dataset, load_dataset
 from full_pun_generation.wordnet import get_definitions_similarity
 from nltk.corpus import wordnet as wn
-from transformers import (DataCollatorForLanguageModeling,
-                          T5ForConditionalGeneration, T5Tokenizer, Trainer,
-                          TrainingArguments)
+from transformers import (DataCollatorForSeq2Seq,
+                          T5ForConditionalGeneration, T5Tokenizer,
+                          Seq2SeqTrainer, Seq2SeqTrainingArguments)
 
 parser = ArgumentParser()
 parser.add_argument(
-        "--corpus",
-        "-c",
-        help="Puntuguese corpus file path (puns.json)",
-        required=True,
-        type=Path,
-        )
+    "--corpus",
+    "-c",
+    help="Puntuguese corpus file path (puns.json)",
+    required=True,
+    type=Path,
+)
 parser.add_argument(
-        "--model_name",
-        "-m",
-        help="HuggingFace model name to fine-tune",
-        required=False,
-        type=str,
-        default="unicamp-dl/ptt5-base-portuguese-vocab",
-        )
+    "--model_name",
+    "-m",
+    help="HuggingFace model name to fine-tune",
+    required=False,
+    type=str,
+    default="unicamp-dl/ptt5-v2-base",
+)
 parser.add_argument(
-        "--no_train",
-        action="store_true",
-        help="Do not train the model",
-        required=False,
-        )
+    "--output",
+    "-o",
+    help="File path to save predictions",
+    required=False,
+    type=Path,
+    default=None
+)
 parser.add_argument(
-        "--no_test",
-        action="store_true",
-        help="Do not test the model",
-        required=False,
-        )
+    "--no_train",
+    action="store_true",
+    help="Do not train the model",
+    required=False,
+)
+parser.add_argument(
+    "--no_test",
+    action="store_true",
+    help="Do not test the model",
+    required=False,
+)
 args = parser.parse_args()
+
 
 def update_signs(row):
     if not row["homograph"]:
         return {
-                "pun sign": row["pun sign"],
-                "alternative sign": row["alternative sign"],
-                }
+            "pun sign": row["pun sign"],
+            "alternative sign": row["alternative sign"],
+        }
     synsets = wn.synsets(row["pun sign"], lang="por")
     if len(synsets) < 2:
         return {"pun sign": "", "alternative sign": ""}
@@ -57,50 +66,47 @@ def update_signs(row):
 # Read and preprocess the Puntuguese corpus
 puntuguese = pl.read_json(args.corpus)
 puntuguese = (
-        puntuguese.filter(pl.col("signs").list.len() == 1)  # Only one sign
-        .with_columns(pl.col("signs").list.get(0))  # Deal with dictionaries
-        .unnest("signs")
-        .filter(pl.col("alternative sign").list.len() == 1)  # Only one alternative sign
-        .with_columns(pl.col("alternative sign").list.get(0))
-        .filter(pl.col("homograph") | pl.col("homophone"))  # Either homograph or homophone
-        .with_columns(  # Substitute homographs by their definitions from WordNet
-                      pl.struct(["pun sign", "alternative sign", "homograph"])
-                      .map_elements(
-                          update_signs,
-                          return_dtype=pl.Struct(
-                              [
-                                  pl.Field("pun sign", pl.String),
-                                  pl.Field("alternative sign", pl.String),
-                                  ]
-                              ),
-                          )
-                      .alias("updated signs")
-                      )
-        .select(
-            pl.col("id"),
-            pl.col("text"),
-            pl.col("updated signs").struct.field("pun sign"),
-            pl.col("updated signs").struct.field("alternative sign"),
-            )
-        .filter(pl.col("pun sign") != "")  # Ignore homographs that are not in WordNet
-        )
+    puntuguese.filter(pl.col("signs").list.len() == 1)  # Only one sign
+    .with_columns(pl.col("signs").list.get(0))  # Deal with dictionaries
+    .unnest("signs")
+    # Only one alternative sign
+    .filter(pl.col("alternative sign").list.len() == 1)
+    .with_columns(pl.col("alternative sign").list.get(0))
+    # Either homograph or homophone
+    .filter(pl.col("homograph") | pl.col("homophone"))
+)
 
 task_preffix = "Criar trocadilho"
-inputs = puntuguese.select(
-        [
-            pl.col("id"),
-            pl.concat_str(
-                [
-                    pl.lit(task_preffix),
-                    pl.concat_str(
-                        [pl.col("pun sign"), pl.col("alternative sign")], separator="/"
-                        ),
-                    ],
-                separator=": ",
-                ).alias("command"),
-            pl.col("text").alias("label"),
+inputs = puntuguese.with_columns(  # Substitute homographs by their definitions from WordNet
+    pl.struct(["pun sign", "alternative sign", "homograph"])
+    .map_elements(
+        update_signs,
+        return_dtype=pl.Struct(
+            [
+                pl.Field("pun sign", pl.String),
+                pl.Field("alternative sign", pl.String),
             ]
-        )
+        ),
+    )
+    .alias("updated signs")).select(
+    pl.col("id"),
+    pl.col("text"),
+    pl.col("updated signs").struct.field("pun sign"),
+    pl.col("updated signs").struct.field("alternative sign")).filter(pl.col("pun sign") != "").select(
+    [
+        pl.col("id"),
+        pl.concat_str(
+            [
+                pl.lit(task_preffix),
+                pl.concat_str(
+                    [pl.col("pun sign"), pl.col("alternative sign")], separator="/"
+                ),
+            ],
+            separator=": ",
+        ).alias("command"),
+        pl.col("text").alias("label"),
+    ]
+)
 
 # Load tokenizer
 model_path = Path(args.model_name)
@@ -123,43 +129,47 @@ for split, split_ids in splits.items():
     split_inputs = inputs.filter(pl.col("id").is_in(split_ids))
 
     tokenized_split = tokenizer(
-            split_inputs["command"].to_list(),
-            truncation=True,
-            padding="max_length",
-            max_length=128,
-            return_tensors="pt",
-            )
+        split_inputs["command"].to_list(),
+        truncation=True,
+        padding="max_length",
+        max_length=512,
+        return_tensors="pt",
+    )
     tokenized_split["labels"] = tokenizer(
-            split_inputs["label"].to_list(),
-            truncation=True,
-            padding="max_length",
-            max_length=128,
-            return_tensors="pt",
-            )["input_ids"]
+        split_inputs["label"].to_list(),
+        truncation=True,
+        padding="max_length",
+        max_length=512,
+        return_tensors="pt",
+    )["input_ids"]
     datasets[split] = Dataset.from_dict(tokenized_split)
 
 model = T5ForConditionalGeneration.from_pretrained(args.model_name)
 
 if not args.no_train:
-    data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False)
-    training_args = TrainingArguments(
-            output_dir="results/models",
-            overwrite_output_dir=True,
-            num_train_epochs=200,
-            learning_rate=1e-3,
-            save_total_limit=1,
-            eval_steps=0.1,
-            )
-    trainer = Trainer(
-            model=model,
-            args=training_args,
-            train_dataset=datasets["train"],
-            eval_dataset=datasets["eval"],
-            data_collator=data_collator,
-            )
+    data_collator = DataCollatorForSeq2Seq(tokenizer=tokenizer, model=model)
+    training_args = Seq2SeqTrainingArguments(
+        output_dir="results/models",
+        overwrite_output_dir=True,
+        num_train_epochs=200,
+        learning_rate=1e-3,
+        save_total_limit=1,
+        eval_steps=0.1,
+        predict_with_generate=True,
+    )
+    trainer = Seq2SeqTrainer(
+        model=model,
+        args=training_args,
+        train_dataset=datasets["train"],
+        eval_dataset=datasets["eval"],
+        data_collator=data_collator,
+    )
     trainer.train()
 
 if not args.no_test:
+    test_df = inputs.filter(
+        pl.col("id").is_in(split_ids)).join(
+        puntuguese, on=pl.col("id"), how="left")
     with torch.no_grad():
         input_ids = torch.tensor(datasets["test"]["input_ids"])
         attention_mask = torch.tensor(datasets["test"]["attention_mask"])
@@ -167,5 +177,11 @@ if not args.no_test:
                                 attention_mask=attention_mask,
                                 do_sample=True,
                                 temperature=1.0)
-        output = tokenizer.batch_decode(output, skip_special_tokens=True)
-    print(output)
+        test_df = test_df.with_columns(pl.Series("prediction", tokenizer.batch_decode(output, skip_special_tokens=True)))
+    test_df = test_df.select(pl.col(["id", "homograph", "homophone", "pun sign", "alternative sign", "label", "prediction"]))
+
+    if args.output:
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+        test_df.write_ndjson(args.output)
+    else:
+        print(test_df)
