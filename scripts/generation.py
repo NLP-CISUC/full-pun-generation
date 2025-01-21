@@ -7,9 +7,11 @@ import torch
 from datasets import Dataset, load_dataset
 from full_pun_generation.wordnet import get_definitions_similarity
 from nltk.corpus import wordnet as wn
-from transformers import (DataCollatorForSeq2Seq,
-                          T5ForConditionalGeneration, T5Tokenizer,
-                          Seq2SeqTrainer, Seq2SeqTrainingArguments)
+from transformers import (AutoTokenizer, DataCollatorForLanguageModeling,
+                          DataCollatorForSeq2Seq, GPT2LMHeadModel,
+                          GPT2TokenizerFast, Seq2SeqTrainer,
+                          Seq2SeqTrainingArguments, T5ForConditionalGeneration,
+                          T5TokenizerFast, Trainer, TrainingArguments)
 
 parser = ArgumentParser()
 parser.add_argument(
@@ -115,14 +117,33 @@ inputs = (
 
 # Load tokenizer
 model_path = Path(args.model_name)
+model_name = args.model_name
 if model_path.is_dir():
     json_file = open(args.model_name + "/config.json")
     config = json.load(json_file)
     json_file.close()
-    tokenizer = T5Tokenizer.from_pretrained(config["_name_or_path"])
+    tokenizer = AutoTokenizer.from_pretrained(config["_name_or_path"])
+    model_name = config["_name_or_path"]
 else:
-    tokenizer = T5Tokenizer.from_pretrained(args.model_name)
-tokenizer.pad_token = tokenizer.eos_token
+    tokenizer = AutoTokenizer.from_pretrained(args.model_name)
+
+# Will use model_type to get the correct preprocessing, model, data_collator, etc.
+model_type = ""
+if isinstance(tokenizer, T5TokenizerFast):
+    model_type = "t5"
+if isinstance(tokenizer, GPT2TokenizerFast):
+    model_type = "gpt2"
+
+if model_type == "t5":
+    tokenizer.pad_token = tokenizer.eos_token
+if model_type == "gpt2":
+    inputs = inputs.with_columns(
+        pl.concat_str(
+            [pl.col("command"),
+             pl.col("label")],
+            separator=" ### ",
+        )
+    )
 
 # Split and tokenize
 hf_puntuguese = load_dataset("Superar/Puntuguese")
@@ -149,20 +170,34 @@ for split, split_ids in splits.items():
     )["input_ids"]
     datasets[split] = Dataset.from_dict(tokenized_split)
 
-model = T5ForConditionalGeneration.from_pretrained(args.model_name)
+# Deal with different types of models
+model = None
+data_collator_class = None
+data_collator_args = {"tokenizer": tokenizer}
+training_args_class = None
+training_args_args = {"output_dir": "results/models", "overwrite_output_dir": True,
+                      "num_train_epochs": 200, "learning_rate": 1e-3,
+                      "save_total_limit": 1, "eval_steps": 0.1}
+trainer_class = None
+if model_type == "t5":
+    model = T5ForConditionalGeneration.from_pretrained(args.model_name)
+    data_collator_class = DataCollatorForSeq2Seq
+    data_collator_args["model"] = model
+    training_args_class = Seq2SeqTrainingArguments
+    training_args_args["predict_with_generate"] = True
+    trainer_class = Seq2SeqTrainer
+if model_type == "gpt2":
+    model = GPT2LMHeadModel.from_pretrained(args.model_name)
+    data_collator_class = DataCollatorForLanguageModeling
+    data_collator_args["mlm"] = False
+    training_args_class = TrainingArguments
+    trainer_class = Trainer
 
-if not args.no_train:
-    data_collator = DataCollatorForSeq2Seq(tokenizer=tokenizer, model=model)
-    training_args = Seq2SeqTrainingArguments(
-        output_dir="results/models",
-        overwrite_output_dir=True,
-        num_train_epochs=200,
-        learning_rate=1e-3,
-        save_total_limit=1,
-        eval_steps=0.1,
-        predict_with_generate=True,
-    )
-    trainer = Seq2SeqTrainer(
+# Training
+if not args.no_train and model_type:
+    data_collator = data_collator_class(**data_collator_args)
+    training_args = training_args_class(**training_args_args)
+    trainer = trainer_class(
         model=model,
         args=training_args,
         train_dataset=datasets["train"],
@@ -171,10 +206,11 @@ if not args.no_train:
     )
     trainer.train()
 
-if not args.no_test:
-    test_df = inputs.filter(
-        pl.col("id").is_in(split_ids)).join(
-        puntuguese, on=pl.col("id"), how="left")
+# Test
+if not args.no_test and model:
+    split_ids = splits["test"]
+    test_df = (inputs.filter(pl.col("id").is_in(split_ids))
+               .join(puntuguese, on=pl.col("id"), how="left"))
     with torch.no_grad():
         input_ids = torch.tensor(datasets["test"]["input_ids"])
         attention_mask = torch.tensor(datasets["test"]["attention_mask"])
