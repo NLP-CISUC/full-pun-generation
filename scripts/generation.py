@@ -8,7 +8,7 @@ from datasets import Dataset, load_dataset
 from full_pun_generation.wordnet import get_definitions_similarity
 from nltk.corpus import wordnet as wn
 from transformers import (AutoTokenizer, DataCollatorForLanguageModeling,
-                          DataCollatorForSeq2Seq, GPT2LMHeadModel,
+                          DataCollatorForSeq2Seq, GPTNeoForCausalLM,
                           GPT2TokenizerFast, Seq2SeqTrainer,
                           Seq2SeqTrainingArguments, T5ForConditionalGeneration,
                           T5TokenizerFast, Trainer, TrainingArguments)
@@ -126,17 +126,16 @@ if model_path.is_dir():
     model_name = config["_name_or_path"]
 else:
     tokenizer = AutoTokenizer.from_pretrained(args.model_name)
+tokenizer.pad_token = tokenizer.eos_token
 
 # Will use model_type to get the correct preprocessing, model, data_collator, etc.
 model_type = ""
 if isinstance(tokenizer, T5TokenizerFast):
     model_type = "t5"
 if isinstance(tokenizer, GPT2TokenizerFast):
-    model_type = "gpt2"
+    model_type = "gptneo"
 
-if model_type == "t5":
-    tokenizer.pad_token = tokenizer.eos_token
-if model_type == "gpt2":
+if model_type == "gptneo":
     inputs = inputs.with_columns(
         pl.concat_str(
             [pl.col("command"),
@@ -186,8 +185,8 @@ if model_type == "t5":
     training_args_class = Seq2SeqTrainingArguments
     training_args_args["predict_with_generate"] = True
     trainer_class = Seq2SeqTrainer
-if model_type == "gpt2":
-    model = GPT2LMHeadModel.from_pretrained(args.model_name)
+if model_type == "gptneo":
+    model = GPTNeoForCausalLM.from_pretrained(args.model_name)
     data_collator_class = DataCollatorForLanguageModeling
     data_collator_args["mlm"] = False
     training_args_class = TrainingArguments
