@@ -135,15 +135,6 @@ if isinstance(tokenizer, T5TokenizerFast):
 if isinstance(tokenizer, GPT2TokenizerFast):
     model_type = "gptneo"
 
-if model_type == "gptneo":
-    inputs = inputs.with_columns(
-        pl.concat_str(
-            [pl.col("command"),
-             pl.col("label")],
-            separator=" ### ",
-        )
-    )
-
 # Split and tokenize
 hf_puntuguese = load_dataset("Superar/Puntuguese")
 splits = {"train": [id_[:-2] for id_ in hf_puntuguese["train"]["id"] if id_.endswith("H")],
@@ -152,6 +143,25 @@ splits = {"train": [id_[:-2] for id_ in hf_puntuguese["train"]["id"] if id_.ends
 datasets = dict()
 for split, split_ids in splits.items():
     split_inputs = inputs.filter(pl.col("id").is_in(split_ids))
+
+    if model_type == "gptneo":
+        if split == "test":
+            split_inputs = split_inputs.with_columns(
+                    pl.concat_str(
+                        [pl.col("command"),
+                         pl.lit(" ### ")],
+                        separator="",
+                    )
+                )
+        else:
+            split_inputs = split_inputs.with_columns(
+                    pl.concat_str(
+                        [pl.col("command"),
+                         pl.col("label")],
+                        separator=" ### ",
+                    )
+                )
+
 
     tokenized_split = tokenizer(
         split_inputs["command"].to_list(),
@@ -190,6 +200,7 @@ if model_type == "gptneo":
     data_collator_class = DataCollatorForLanguageModeling
     data_collator_args["mlm"] = False
     training_args_class = TrainingArguments
+    training_args_args["per_device_train_batch_size"] = 4
     trainer_class = Trainer
 
 # Training
@@ -216,7 +227,11 @@ if not args.no_test and model:
         output = model.generate(input_ids=input_ids,
                                 attention_mask=attention_mask,
                                 do_sample=True,
-                                temperature=1.0)
+                                temperature=1.0,
+                                num_beams=4,
+                                top_p=0.8,
+                                repetition_penalty=1.2,
+                                max_new_tokens=512)
         test_df = test_df.with_columns(pl.Series(
             "prediction", tokenizer.batch_decode(output, skip_special_tokens=True)))
     test_df = test_df.select(
