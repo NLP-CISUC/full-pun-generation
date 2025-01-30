@@ -54,6 +54,8 @@ class Puntuguese():
                 return {"pun sign": "", "alternative sign": ""}
             _, d1, d2 = get_definitions_similarity(synsets)
             return {"pun sign": d1, "alternative sign": d2}
+        if "pun sign" not in self.data.columns:
+            raise ValueError("Data must be filtered first.")
         self.data = (self.data
                      .with_columns(
                          pl.struct(["pun sign", "alternative sign", "homograph"])
@@ -68,6 +70,8 @@ class Puntuguese():
                      .select(
                          pl.col("id"),
                          pl.col("text"),
+                         pl.col("homograph"),
+                         pl.col("homophone"),
                          pl.col("updated signs").struct.field("pun sign"),
                          pl.col("updated signs").struct.field("alternative sign")
                          )
