@@ -19,6 +19,7 @@ dependencies = [
     "phonemizer>=3.3.0",
     "polars>=1.19.0",
     "protobuf>=5.29.3",
+    "seaborn>=0.13.2",
     "sentence-transformers>=3.3.1",
     "sentencepiece>=0.2.0",
     "spacy==3.8.3",

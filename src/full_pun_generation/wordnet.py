@@ -15,27 +15,43 @@ def get_ambiguous_words(words):
         synsets = wn.synsets(w, lang="por")
         if len(synsets) < 2:
             continue
-        min_similarity, _, _ = get_definitions_similarity(synsets)
+        min_similarity, def1, def2 = get_definitions_similarity(synsets)
         if min_similarity < 0.2:
-            ambiguous_words.add((w, min_similarity))
+            ambiguous_words.add((w, min_similarity, def1, def2))
     ambiguous_words = sorted(ambiguous_words, key=lambda x: x[1])
     return ambiguous_words
 
 
-def get_definitions_similarity(synsets):
-    logging.info(f"Calculating similarity between definitions of {synsets}")
-    definitions = [s.definition() for s in synsets]
-    logging.info(f"Definitions: {definitions}")
-    embeddings = sts_model.encode(definitions)
-    similarity = sts_model.similarity(embeddings, embeddings)
+def get_definitions_similarity(synsets1, synsets2=None):
+    logging.info(f"Calculating similarity between definitions of {synsets1} and {synsets2}")
+
+    definitions1 = [s.definition() for s in synsets1]
+    definitions2 = [s.definition() for s in synsets2] if synsets2 else definitions1
+
+    logging.info(f"Definitions #1: {definitions1}")
+    if synsets2:
+        logging.info(f"Definitions #2: {definitions2}")
+
+    embeddings1 = sts_model.encode(definitions1)
+    embeddings2 = sts_model.encode(definitions2) if synsets2 else embeddings1
+
+    similarity = sts_model.similarity(embeddings1, embeddings2)
     min_index = np.unravel_index(similarity.argmin(), similarity.shape)
     min_similarity = similarity[min_index]
-    logging.info(f"Most unsimilar: {min_similarity}, {min_index}")
-    return min_similarity, definitions[min_index[0]], definitions[min_index[1]]
+
+    definition1 = definitions1[min_index[0]]
+    definition2 = definitions2[min_index[1]]
+
+    logging.info(f"Most unsimilar: {min_similarity}, {definition1} - {definition2}")
+    return min_similarity, definition1, definition2 
 
 
 def get_valid_words(words):
     return [w for w in words if w in wn.words(lang="por")]
+
+
+def get_words_synsets(words):
+    return [wn.synsets(w, lang="por") for w in words]
 
 
 def test():

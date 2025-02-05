@@ -1,15 +1,30 @@
-{"category": "Ciência e tecnologia", "headline": "Restos de salmoura no asteroide Bennu contêm minerais essenciais para a vida"}
-{"category": "Ciência e tecnologia", "headline": "Starlink Direct to Cell passa a disponibilizar 4G via satélite para todos os smartphones"}
-{"category": "Ciência e tecnologia", "headline": "O preço do Samsung Galaxy S25 cai a pique com os descontos na Samsung"}
-{"category": "Ciência e tecnologia", "headline": "O teu Smartphone está a ouvir as tuas conversas (com a tua autorização)"}
-{"category": "Ciência e tecnologia", "headline": "Vodafone realiza primeira videochamada espacial do mundo com smartphone"}
-{"category": "Entretenimento", "headline": "\"Não daria à minha filha um vibrador aos 12 anos. Não posso é condenar\""}
-{"category": "Entretenimento", "headline": "A Semente do Figo Sagrado: o melhor filme do iraniano Mohammad Rasoulof"}
-{"category": "Entretenimento", "headline": "E assim foi o terceiro episódio de \"A Herança\""}
-{"category": "Entretenimento", "headline": "Não gostou, mas usou! Vânia Sá veste polémico vestido de Inês Morais após discussões sem fim"}
-{"category": "Entretenimento", "headline": "Falámos com José Condessa. Eis o que esperar do futuro de 'Rabo de Peixe'"}
-{"category": "Desporto", "headline": "'Loucura'. Portugal fez história no Mundial de andebol e festejou assim"}
-{"category": "Desporto", "headline": "Harder não esquece golo da qualificação do Sporting com o selo de três sub-19: \"Este foi especial!\""}
-{"category": "Desporto", "headline": "Liga Europa: o onze provável do FC Porto na estreia de Martín Anselmi"}
-{"category": "Desporto", "headline": "Juventus-Benfica, 0-2 Os destaques do Benfica: Um, dois, três... tantos Florentinos"}
-{"category": "Desporto", "headline": "Entre 64 golos em 18 jogos, havia um que podia cruzar Benfica e Sporting: os possíveis adversários dos portugueses na Champions"}
+{"id": 1, "country": "PT", "category": "Ciência e tecnologia", "headline": "Restos de salmoura no asteroide Bennu contêm minerais essenciais para a vida."}
+{"id": 2, "country": "PT", "category": "Ciência e tecnologia", "headline": "Starlink Direct to Cell passa a disponibilizar 4G via satélite para todos os smartphones"}
+{"id": 3, "country": "PT", "category": "Ciência e tecnologia", "headline": "O preço do Samsung Galaxy S25 cai a pique com os descontos na Samsung"}
+{"id": 4, "country": "PT", "category": "Ciência e tecnologia", "headline": "O teu Smartphone está a ouvir as tuas conversas (com a tua autorização)"}
+{"id": 5, "country": "PT", "category": "Ciência e tecnologia", "headline": "Vodafone realiza primeira videochamada espacial do mundo com smartphone"}
+{"id": 6, "country": "PT", "category": "Entretenimento", "headline": "\"Não daria à minha filha um vibrador aos 12 anos. Não posso é condenar\""}
+{"id": 7, "country": "PT", "category": "Entretenimento", "headline": "A Semente do Figo Sagrado: o melhor filme do iraniano Mohammad Rasoulof"}
+{"id": 8, "country": "PT", "category": "Entretenimento", "headline": "E assim foi o terceiro episódio de \"A Herança\""}
+{"id": 9, "country": "PT", "category": "Entretenimento", "headline": "Não gostou, mas usou! Vânia Sá veste polémico vestido de Inês Morais após discussões sem fim"}
+{"id": 10, "country": "PT", "category": "Entretenimento", "headline": "Falámos com José Condessa. Eis o que esperar do futuro de 'Rabo de Peixe'"}
+{"id": 11, "country": "PT", "category": "Desporto", "headline": "'Loucura'. Portugal fez história no Mundial de andebol e festejou assim"}
+{"id": 12, "country": "PT", "category": "Desporto", "headline": "Harder não esquece golo da qualificação do Sporting com o selo de três sub-19: \"Este foi especial!\""}
+{"id": 13, "country": "PT", "category": "Desporto", "headline": "Liga Europa: o onze provável do FC Porto na estreia de Martín Anselmi"}
+{"id": 14, "country": "PT", "category": "Desporto", "headline": "Juventus-Benfica, 0-2 Os destaques do Benfica: Um, dois, três... tantos Florentinos"}
+{"id": 15, "country": "PT", "category": "Desporto", "headline": "Entre 64 golos em 18 jogos, havia um que podia cruzar Benfica e Sporting: os possíveis adversários dos portugueses na Champions"}
+{"id": 16, "country": "BR", "category": "Ciência e tecnologia", "headline": "Xiaomi lança linha Redmi Note 14 no Brasil com variante Pro Plus; veja os preços"}
+{"id": 17, "country": "BR", "category": "Ciência e tecnologia", "headline": "Como escolher o notebook ideal: guia de modelos básicos, para trabalho/estudo, 2 em 1, jogos e topo de linha"}
+{"id": 18, "country": "BR", "category": "Ciência e tecnologia", "headline": "NASA se pronuncia sobre asteroide que pode atingir a Terra em 2032"}
+{"id": 19, "country": "BR", "category": "Ciência e tecnologia", "headline": "Honor anuncia estreia oficial no Brasil com celulares, tablets e mais dispositivos"}
+{"id": 20, "country": "BR", "category": "Ciência e tecnologia", "headline": "A Apple não quer mais os iPhones ficando sem internet"}
+{"id": 21, "country": "BR", "category": "Entretenimento", "headline": "Vinícius analisa romance de Aline no BBB 25: 'Em duas semanas pega bode'"}
+{"id": 22, "country": "BR", "category": "Entretenimento", "headline": "Rodrigo Bocardi é demitido da Globo sob acusação de 'descumprir normas éticas'"}
+{"id": 23, "country": "BR", "category": "Entretenimento", "headline": "BBB 25: Acompanhe a 3ª Prova do Líder e veja os gabaritos!"}
+{"id": 24, "country": "BR", "category": "Entretenimento", "headline": "BBB 25 anuncia 'quarto secreto' e fim da eliminação em duplas; entenda"}
+{"id": 25, "country": "BR", "category": "Entretenimento", "headline": "Karla Sofía Gascón x Fernanda Torres: a polêmica que pode custar o Oscar"}
+{"id": 26, "country": "BR", "category": "Desporto", "headline": "Neymar vai beijar o escudo do Santos FC? BET cria aposta sobre apresentação do jogador"}
+{"id": 27, "country": "BR", "category": "Desporto", "headline": "Gabigol desencanta no primeiro jogo do Cruzeiro sem Diniz e volta a anotar hat-trick depois de 3 anos"}
+{"id": 28, "country": "BR", "category": "Desporto", "headline": "No retorno ao Maracanã, Flamengo vence Sampaio Corrêa pelo Campeonato Carioca"}
+{"id": 29, "country": "BR", "category": "Desporto", "headline": "Filipe Luís projeta Flamengo para Supercopa e abre o jogo sobre estreia de Danilo"}
+{"id": 30, "country": "BR", "category": "Desporto", "headline": "Champions League sorteia nesta sexta-feira os cruzamentos dos playoffs e oitavas de final. Confira os times e o chaveamento"}

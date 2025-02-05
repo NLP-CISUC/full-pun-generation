@@ -6,7 +6,7 @@ from gensim.models import KeyedVectors
 
 kw_model = KeyBERT(model='paraphrase-multilingual-MiniLM-L12-v2')
 pos_model = pipeline('ner', model='Emanuel/porttagger-base')
-embeddings_model = KeyedVectors.load('../../Resources/Embeddings/Portuguese/glove_s300.kv')
+embeddings_model = KeyedVectors.load('../Resources/Embeddings/Portuguese/glove_s300.kv')
 
 def pos_tagging(text):
     logging.info('Performing POS tagging')
