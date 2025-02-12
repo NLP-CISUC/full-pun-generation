@@ -10,7 +10,7 @@ results_path = Path("results/generation")
 top_k_models = 2
 top_k_jokes = 1
 num_evaluators = 20
-num_overlaps = 3
+num_overlaps = 2
 
 
 def semantic_similarity(group):
@@ -34,6 +34,7 @@ def print_info(df, name):
 
 dfs = list()
 for results_filepath in results_path.glob("*.jsonl"):
+    print(f"Loading {results_filepath}")
     df = (pl.read_ndjson(results_filepath).unique()
           .with_columns(
               pl.lit(results_filepath.name).str.strip_suffix(".jsonl")
@@ -44,9 +45,10 @@ for results_filepath in results_path.glob("*.jsonl"):
                    pl.col("model"),
                    pl.col("generated")
                    .str.extract(r"\{[^}]+\}", 0)
-                   .str.extract(r"\"trocadilho\": \"(.*)\"", 1)])
+                   .str.extract(r"\"trocadilho\":\s?\"(.*)\"", 1)])
           )
     dfs.append(df)
+print("**********")
 df = pl.concat(dfs)
 print_info(df, "First load")
 
@@ -64,6 +66,7 @@ df = df.join(failed, how="anti",
              on=["headline", "pun sign", "alternative sign"])
 print_info(failed, "Failed generations")
 print_info(df, "After removing failed generations")
+print("**********")
 
 df = (df.filter(pl.col("generated").is_not_null())
         .with_columns(pl.struct([pl.col("headline"),
@@ -86,12 +89,19 @@ top_similarity_models = (avg_df.sort("avg similarity", descending=True)
                          .head(top_k_models)["model"].to_list())
 top_typicality_models = (avg_df.sort("avg typicality", descending=True)
                          .head(top_k_models)["model"].to_list())
+worst_similarity_models = (avg_df.sort("avg similarity")
+                           .head(top_k_models)["model"].to_list())
+worst_typicality_models = (avg_df.sort("avg typicality")
+                           .head(top_k_models)["model"].to_list())
 top_models = set(top_similarity_models + top_typicality_models)
 df = df.filter(pl.col("model").is_in(top_models))
 print(f"Top similarity models: {top_similarity_models}")
 print(f"Top typicality models: {top_typicality_models}")
+print(f"Worst similarity models: {worst_similarity_models}")
+print(f"Worst typicality models: {worst_typicality_models}")
 print(f"Top models: {top_models}")
 print_info(df, "After filtering top models")
+print("**********")
 
 # Get top-k puns for each criterion
 top_similarity = (df.group_by(["model", "headline"])
@@ -116,6 +126,7 @@ print(f"Number of contest pairs: {pairs.height}")
 
 chunk_size = (pairs.height * num_overlaps) // num_evaluators
 chunks = list(pairs.iter_slices(chunk_size))
+print(f"Chunk sizes: {[chunk.height for chunk in chunks]}")
 
 annotator_id = 0
 for _ in range(num_overlaps):
