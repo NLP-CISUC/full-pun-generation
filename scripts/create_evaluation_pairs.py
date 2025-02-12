@@ -7,7 +7,8 @@ from transformers import pipeline
 recognition_model = pipeline(
     "text-classification", "Superar/pun-recognition-pt")
 results_path = Path("results/generation")
-top_k = 2
+top_k_models = 2
+top_k_jokes = 1
 num_evaluators = 20
 num_overlaps = 3
 
@@ -23,9 +24,17 @@ def typicality(puns):
     return pl.Series([p["score"] for p in prediction])
 
 
+def print_info(df, name):
+    num_models = df["model"].n_unique()
+    num_headlines = df["headline"].n_unique()
+    num_inputs = df.n_unique(["headline", "pun sign", "alternative sign"])
+    print(f"{name}: {df.height} puns from {num_models} models " +
+          f"with {num_inputs} inputs from {num_headlines} headlines")
+
+
 dfs = list()
 for results_filepath in results_path.glob("*.jsonl"):
-    df = (pl.read_ndjson(results_filepath)
+    df = (pl.read_ndjson(results_filepath).unique()
           .with_columns(
               pl.lit(results_filepath.name).str.strip_suffix(".jsonl")
               .alias("model"))
@@ -38,9 +47,25 @@ for results_filepath in results_path.glob("*.jsonl"):
                    .str.extract(r"\"trocadilho\": \"(.*)\"", 1)])
           )
     dfs.append(df)
+df = pl.concat(dfs)
+print_info(df, "First load")
 
-df = (pl.concat(dfs)
-        .filter(pl.col("generated").is_not_null())
+# Remove examples with empty signs
+null_signs = df.filter(pl.col('pun sign').is_null())
+print_info(null_signs, "Null signs")
+df = df.filter(pl.col('pun sign').is_not_null())
+num_models = df["model"].n_unique()
+print_info(df, "After removing null signs")
+
+# If a model failed to generate pun for specific
+# headline + pair of words, remove it for all models
+failed = df.filter(pl.col("generated").is_null())
+df = df.join(failed, how="anti",
+             on=["headline", "pun sign", "alternative sign"])
+print_info(failed, "Failed generations")
+print_info(df, "After removing failed generations")
+
+df = (df.filter(pl.col("generated").is_not_null())
         .with_columns(pl.struct([pl.col("headline"),
                                  pl.col("generated")])
                       .map_elements(semantic_similarity,
@@ -51,25 +76,46 @@ df = (pl.concat(dfs)
                       .alias("typicality"))
       )
 
-# Get top-k puns for each criterion
-top_similarity = (df.group_by("model")
-                  .agg(pl.all().top_k_by(pl.col("similarity"), top_k)))
-top_typicality = (df.group_by("model")
-                  .agg(pl.all().top_k_by(pl.col("typicality"), top_k)))
+# Get top models for each criterion
+avg_df = (df.group_by("model")
+          .agg([
+              pl.col("similarity").mean().alias("avg similarity"),
+              pl.col("typicality").mean().alias("avg typicality")
+          ]))
+top_similarity_models = (avg_df.sort("avg similarity", descending=True)
+                         .head(top_k_models)["model"].to_list())
+top_typicality_models = (avg_df.sort("avg typicality", descending=True)
+                         .head(top_k_models)["model"].to_list())
+top_models = set(top_similarity_models + top_typicality_models)
+df = df.filter(pl.col("model").is_in(top_models))
+print(f"Top similarity models: {top_similarity_models}")
+print(f"Top typicality models: {top_typicality_models}")
+print(f"Top models: {top_models}")
+print_info(df, "After filtering top models")
 
+# Get top-k puns for each criterion
+top_similarity = (df.group_by(["model", "headline"])
+                  .agg(pl.all().top_k_by(pl.col("similarity"),
+                                         top_k_jokes)))
+top_typicality = (df.group_by(["model", "headline"])
+                  .agg(pl.all().top_k_by(pl.col("typicality"),
+                                         top_k_jokes)))
 df = (pl.concat([top_similarity, top_typicality])
-      .explode(pl.all().exclude("model"))
+      .explode(pl.all().exclude(["model", "headline"]))
       .unique()
       .with_row_index("id"))
+print_info(df, "After selecting top puns")
 
 # Create evaluation pairs
 pairs = (df.join(df, how="cross")
          .filter(pl.col("model") != pl.col("model_right"))
+         .filter(pl.col("headline") == pl.col("headline_right"))
          .filter(pl.col("id") < pl.col("id_right"))
          .sample(fraction=1.0, shuffle=True))
+print(f"Number of contest pairs: {pairs.height}")
 
-chunk_size = pairs.height // num_evaluators
-chunks = pairs.iter_slices(chunk_size)
+chunk_size = (pairs.height * num_overlaps) // num_evaluators
+chunks = list(pairs.iter_slices(chunk_size))
 
 annotator_id = 0
 for _ in range(num_overlaps):
@@ -78,4 +124,3 @@ for _ in range(num_overlaps):
                                     pl.lit(chunk_id).alias("chunk_id")])
         chunk.write_ndjson(f"data/evaluation/annotator_{annotator_id}.jsonl")
         annotator_id += 1
-
