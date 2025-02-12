@@ -1,46 +1,32 @@
-import logging
+import os
+from pathlib import Path
 
 import gradio as gr
+import polars as pl
+import yaml
 
-from .context import expand_keywords, extract_keywords
-from .pronunciation import get_pronunciation, phoneme_to_grapheme
-from .wordnet import get_ambiguous_words, get_valid_words
-
-logging.basicConfig(level=logging.INFO,
-                    format='%(asctime)s - %(levelname)s: %(message)s',
-                    datefmt='%Y-%m-%d %H:%M:%S',
-                    handlers=[logging.StreamHandler()])
+credentials_filepath = Path("data/config/credentials.yaml")
+with credentials_filepath.open() as file:
+    credentials = yaml.safe_load(file)
 
 
-def get_signs(text, n_keywords=5):
-    keywords = extract_keywords(text, n_keywords)
-    expanded_keywords = expand_keywords(keywords)
-    words = {kw for kw, _ in expanded_keywords}
+def get_current_pair(df, idx):
+    if idx < df.height:
+        return (df.item(idx, "generated"),
+                df.item(idx, "generated_right"))
+    return None, None
 
-    homographic_signs = get_ambiguous_words(words)
-    graphemes = [phoneme_to_grapheme(pron)[1] for pron in get_pronunciation(words)]
-    graphemes = [get_valid_words(g) for g in graphemes]
-    logging.info(f'Generated graphemes: {graphemes}')
-    homophonic_signs = [g for g in graphemes if len(g) > 1]
-    return ['\n'.join([str(w) for w, _ in homographic_signs]),
-            '\n'.join([str(g) for g in homophonic_signs])]
 
-def create_interface():
-    iface = gr.Interface(
-            fn=get_signs,
-            inputs=[gr.Textbox(lines=10, label='Input text'),
-                    gr.Number(value=5, label='Number of keywords')],
-            outputs=[gr.Textbox(label='Homographic signs'),
-                     gr.Textbox(label='Homophonic signs')],
-            title='Pun Generation',
-            description='Generate pun based on input text',
-            theme='huggingface')
-    return iface
+def load_data(request: gr.Request):
+    filepath = credentials[request.username]["filepath"]
+    df = pl.read_ndjson(filepath)
+    return get_current_pair(df, 0)
 
-def main():
-    iface = create_interface()
-    iface.launch()
 
-if __name__ == '__main__':
-    main()
+with gr.Blocks() as demo:
+    headline = gr.Markdown("## Headline")
+    with gr.Row():
+        left = gr.Markdown("Left")
+        right = gr.Markdown("Right")
 
+demo.launch(auth=[(c, credentials[c]["password"]) for c in credentials])
