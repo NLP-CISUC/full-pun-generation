@@ -1,5 +1,7 @@
 __pycache__/
 *.pyc
 
+wandb/
+
 results/models/
 data/config/credentials.yaml

@@ -27,6 +27,7 @@ dependencies = [
     "tiktoken>=0.8.0",
     "torch>=2.5.1",
     "transformers[torch]>=4.47.0",
+    "wandb>=0.19.6",
 ]
 
 [project.scripts]
