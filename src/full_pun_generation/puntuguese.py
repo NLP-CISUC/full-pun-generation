@@ -2,7 +2,9 @@ import polars as pl
 from datasets import load_dataset
 from nltk.corpus import wordnet as wn
 
-from full_pun_generation.wordnet import get_definitions_similarity
+from full_pun_generation.wordnet import (get_definitions_similarity,
+                                         get_words_synsets,
+                                         get_valid_words)
 
 
 class Puntuguese():
@@ -34,74 +36,82 @@ class Puntuguese():
         and one alternative signs.
         """
         self.data = (
-                self.data.filter(pl.col("signs").list.len() == 1)
-                .with_columns(pl.col("signs").list.get(0))
+            self.data.filter(pl.col("signs").list.len() == 1)
+            .with_columns(pl.col("signs").list.get(0))
                 .unnest("signs")
                 .filter(pl.col("alternative sign").list.len() == 1)
                 .with_columns(pl.col("alternative sign").list.get(0))
                 .filter(pl.col("homograph") | pl.col("homophone"))
-                )
+        )
 
-    def prepare_prompts(self):
-        """
-        Create columns with generation prompts.
-        """
-        def update_signs(row):
-            if not row["homograph"]:
-                return row
-            synsets = wn.synsets(row["pun sign"], lang="por")
-            if len(synsets) < 2:
-                return {"pun sign": "", "alternative sign": ""}
-            _, d1, d2 = get_definitions_similarity(synsets)
-            return {"pun sign": d1, "alternative sign": d2}
+    def include_definitions(self):
+        def get_definitions(row):
+            valid_signs = get_valid_words(
+                [row["pun sign"], row["alternative sign"]])
+            if len(valid_signs) < 2:
+                return ["", ""]
+            synsets1, synsets2 = get_words_synsets([row["pun sign"],
+                                                    row["alternative sign"]])
+            _, def1, def2 = get_definitions_similarity(synsets1, synsets2)
+            return [def1, def2]
         if "pun sign" not in self.data.columns:
             raise ValueError("Data must be filtered first.")
-        self.data = (self.data
-                     .with_columns(
-                         pl.struct(["pun sign", "alternative sign", "homograph"])
-                         .map_elements(update_signs,
-                                       return_dtype=pl.Struct(
-                                           [pl.Field("pun sign", pl.String),
-                                            pl.Field("alternative sign", pl.String)]
-                                           )
-                                       )
-                         .alias("updated signs")
-                         )
-                     .select(
-                         pl.col("id"),
-                         pl.col("text"),
-                         pl.col("homograph"),
-                         pl.col("homophone"),
-                         pl.col("updated signs").struct.field("pun sign"),
-                         pl.col("updated signs").struct.field("alternative sign")
-                         )
-                     .filter(pl.col("pun sign") != "")
-                     .with_columns(
-                         pl.concat_str([
-                             pl.lit("Criar trocadilho: "),
-                             pl.concat_str([pl.col("pun sign"), pl.col(
-                                 "alternative sign")], separator="/")
-                             ]).alias("command")
-                         ))
 
-    def prepare_causal_prompts(self):
-        def truncate(row):
-            is_test = (row["id"] in self.splits["test"])
-            is_validation = (row["id"] in self.splits["validation"])
-            if is_test or is_validation:
-                return row["command"].split(" ### ")[0] + " ### "
-            return row["command"]
-        if "command" not in self.data.columns:
-            self.prepare_prompts()
         self.data = (self.data
-                     .with_columns(pl.concat_str([pl.col("command"), pl.col("text")],
-                                                 separator=" ### "))
-                     .with_columns(pl.struct(["command", "id"])
-                                   .map_elements(truncate)))
+                     .with_columns(
+                         pl.struct(
+                             ["pun sign", "alternative sign", "homograph"])
+                         .map_elements(get_definitions, return_dtype=pl.List(pl.String))
+                         .alias("definitions"))
+                     .with_columns(
+                         pl.col("definitions").list.get(
+                             0).alias("pun definition"),
+                         pl.col("definitions").list.get(1).alias("alternative definition"))
+                     .drop("definitions")
+                     )
+
+    def create_prompts(self, use_definitions=False):
+        if use_definitions:
+            if "pun definition" not in self.data.columns:
+                self.include_definitions()
+            self.data = (self.data
+                         .filter(
+                             (pl.col("pun definition") != "") &
+                             (pl.col("alternative definition") != "")
+                         )
+                         .with_columns(
+                             pl.concat_str([
+                                 pl.lit("Gerar trocadilho: "),
+                                 pl.col("pun sign"),
+                                 pl.lit(" ("),
+                                 pl.col("pun definition"),
+                                 pl.lit(") / "),
+                                 pl.col("alternative sign"),
+                                 pl.lit(" ("),
+                                 pl.col("alternative definition"),
+                                 pl.lit(")")])
+                             .alias("command"))
+                         )
+        else:
+            self.data = (self.data
+                         .with_columns(
+                             pl.concat_str([
+                                 pl.lit("Gerar trocadilho: "),
+                                 pl.col("pun sign"),
+                                 pl.lit(" / "),
+                                 pl.col("alternative sign")
+                             ]).alias("command"))
+                         )
+
 
 if __name__ == "__main__":
-    puntuguese = Puntuguese("../../Resources/Corpora/BRHuM/data/puns.json")
+    puntuguese = Puntuguese("../Puntuguese/data/puns.json")
     puntuguese.filter_data()
-    puntuguese.prepare_prompts()
-    puntuguese.prepare_causal_prompts()
     print(puntuguese.data)
+    puntuguese.create_prompts()
+    print(puntuguese.data)
+    puntuguese.create_prompts(use_definitions=True)
+    print(puntuguese.data)
+    print(puntuguese.train.height)
+    print(puntuguese.validation.height)
+    print(puntuguese.test.height)
