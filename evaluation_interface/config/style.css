@@ -1,0 +1,44 @@
+.sortable-container-header {
+    font-size: large;
+    margin-bottom: 20px;
+    weight: bold;
+}
+
+.sortable-container-body {
+    background-color: var(--background-color);
+    margin: 0px;
+    margin-top: 20px;
+    padding: 0px;
+    counter-reset: rank;
+}
+
+.sortable-item, .sortable-item:hover {
+    background-color: var(--background-color);
+    color: var(--foreground-color);
+    border-color: var(--primary-color);
+    margin: 0;
+    margin-bottom: 25px;
+    padding-left: 20px;
+    position: relative;
+    height: auto;
+}
+
+.sortable-item::before {
+    font-size: smaller;
+    counter-increment: rank;
+    content: counter(rank);
+    position: absolute;
+    left: -10px;
+    transform: translateY(-50%);
+    background-color: var(--background-color);
+    color: var(--foreground-color);
+    border: inherit;
+    border-radius: 15%;
+    border-color: var(--primary-color);
+    padding: 5px;
+    width: 25px;
+}
+
+.sortable-item:last-of-type {
+    margin-bottom: 0px;
+}
