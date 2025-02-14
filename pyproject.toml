@@ -7,8 +7,6 @@ requires-python = ">=3.9"
 dependencies = [
     "datasets>=3.2.0",
     "editdistance>=0.8.1",
-    "flask-cors>=5.0.0",
-    "flask>=3.1.0",
     "full-pun-generation",
     "gensim>=4.3.3",
     "gradio>=4.44.1",
@@ -26,6 +24,9 @@ dependencies = [
     "sentence-transformers>=3.3.1",
     "sentencepiece>=0.2.0",
     "spacy==3.8.3",
+    "streamlit-authenticator>=0.4.1",
+    "streamlit-sortables>=0.3.1",
+    "streamlit>=1.42.0",
     "tiktoken>=0.8.0",
     "torch>=2.5.1",
     "transformers[torch]>=4.47.0",

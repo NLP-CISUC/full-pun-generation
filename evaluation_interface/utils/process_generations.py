@@ -1,15 +1,15 @@
-import random
 from pathlib import Path
 
 import polars as pl
+import streamlit as st
 from full_pun_generation.wordnet import sts_model
-from transformers import generation, pipeline
+from transformers import pipeline
 
-# Global dictionary to store pre-processed evaluation data.
-evaluation_dataset = None
 
-classifier = pipeline("text-classification",
-                      model="Superar/pun-recognition-pt")
+@st.cache_resource
+def load_classifier():
+    return pipeline("text-classification",
+                    model="Superar/pun-recognition-pt")
 
 
 def semantic_similarity(group):
@@ -19,16 +19,17 @@ def semantic_similarity(group):
 
 
 def typicality(puns):
-    prediction = classifier(puns.to_list())
+    prediction = load_classifier()(puns.to_list())
     return pl.Series([p["score"] for p in prediction])
 
 
-def process_generation_files():
-    generation_dir = Path("../results/generation")
+@st.cache_data
+def load_data():
+    datapath = Path("../results/generation")
     dfs = list()
-    for file_path in generation_dir.glob("*.jsonl"):
-        model_name = file_path.stem
-        df = (pl.read_ndjson(file_path)
+    for filepath in datapath.glob("*.jsonl"):
+        model_name = filepath.stem
+        df = (pl.read_ndjson(filepath)
               .select(pl.col("id").alias("headline_id"),
                       pl.col("headline"),
                       pl.col("pun sign"),
@@ -38,8 +39,8 @@ def process_generation_files():
                       .str.extract(r"\"trocadilho\":\s?\"(.*)\"", 1),
                       pl.lit(model_name).alias("model")))
         dfs.append(df)
-
     df = pl.concat(dfs)
+
     # Remove examples with empty signs
     df = df.filter(pl.col('pun sign').is_not_null())
 
@@ -58,32 +59,8 @@ def process_generation_files():
                           .alias("typicality"))
             .with_columns((0.5 * pl.col("similarity") + 0.5 * pl.col("typicality"))
                           .alias("score"))
+            .sort("score", descending=True)
+            .group_by(pl.col("headline_id", "model"))
+            .first()
           )
-
-    global evaluation_dataset
-    evaluation_dataset = (df.sort("score", descending=True)
-                          .group_by(["headline_id", "model"])
-                          .first())
-
-
-def get_all_headlines():
-    if evaluation_dataset is None:
-        process_generation_files()
-    return (evaluation_dataset
-            .select(pl.col("headline_id"),
-                    pl.col("headline"))
-            .unique()
-            .to_dicts())
-
-
-def get_generated_for_headline(headline_id):
-    if evaluation_dataset is None:
-        process_generation_files()
-    return (evaluation_dataset.filter(pl.col("headline_id") == int(headline_id))
-            .to_dicts())
-
-
-def get_evaluation_data():
-    if evaluation_dataset is None:
-        process_generation_files()
-    return evaluation_dataset.iter_rows(named=True)
+    return df
