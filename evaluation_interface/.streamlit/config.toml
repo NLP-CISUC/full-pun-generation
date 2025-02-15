@@ -1,15 +1,21 @@
 [theme]
 # Dark Gruvbox
-# primaryColor="#D65D0E"
-# backgroundColor="#282828"
-# secondaryBackgroundColor="#1D2021"
-# textColor="#EBDBB2"
+# primaryColor = "#D65D0E"
+# backgroundColor = "#282828"
+# secondaryBackgroundColor = "#1D2021"
+# textColor = "#EBDBB2"
 
 # Light Github
-# primaryColor="#ED6A43"
-primaryColor="#795DA3"
-backgroundColor="#F5F5F5"
-secondaryBackgroundColor="#E8E8E8"
-textColor="#333333"
+# primaryColor = "#ED6A43"
+primaryColor = "#795DA3"
+backgroundColor = "#F5F5F5"
+secondaryBackgroundColor = "#E8E8E8"
+textColor = "#333333"
 
-font="sans serif"
+font = "sans serif"
+
+[server]
+port = 8080
+
+[browser]
+serverAddress = "nlp.dei.uc.pt"

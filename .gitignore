@@ -6,3 +6,5 @@ wandb/
 
 results/models/
 data/config/credentials.yaml
+
+out.log

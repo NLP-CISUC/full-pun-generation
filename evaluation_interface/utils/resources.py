@@ -5,7 +5,6 @@ import streamlit as st
 import yaml
 
 INTERFACE_ROOT = Path(__file__).parent.parent.resolve()
-print(INTERFACE_ROOT)
 
 @st.cache_data
 def load_config():
