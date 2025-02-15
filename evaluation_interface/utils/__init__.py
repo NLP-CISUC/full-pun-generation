@@ -1,7 +1,3 @@
-import streamlit as st
-from .process_generations import load_data
+from .resources import (get_results_path, load_config, load_custom_style,
+                        load_data)
 
-@st.cache_data
-def custom_style():
-    with open("config/style.css") as f:
-        return f.read()

@@ -1,6 +1,5 @@
 .sortable-container-header {
     font-size: large;
-    margin-bottom: 20px;
     weight: bold;
 }
 
@@ -13,14 +12,19 @@
 }
 
 .sortable-item, .sortable-item:hover {
+    font-size: 14px;
     background-color: var(--background-color);
-    color: var(--foreground-color);
-    border-color: var(--primary-color);
+    color: var(--text-color);
+    border-color: var(--text-color);
     margin: 0;
-    margin-bottom: 25px;
+    margin-bottom: 20px;
     padding-left: 20px;
     position: relative;
     height: auto;
+}
+
+.sortable-item:hover {
+    border-color: var(--primary-color);
 }
 
 .sortable-item::before {
@@ -31,12 +35,19 @@
     left: -10px;
     transform: translateY(-50%);
     background-color: var(--background-color);
-    color: var(--foreground-color);
+    color: var(--text-color);
     border: inherit;
     border-radius: 15%;
-    border-color: var(--primary-color);
     padding: 5px;
     width: 25px;
+}
+
+.sortable-item:active::before {
+    display: none;
+}
+
+.sortable-item.dragging::before {
+    display: none;
 }
 
 .sortable-item:last-of-type {
