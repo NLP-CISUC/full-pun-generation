@@ -27,8 +27,8 @@ homographs = (puntuguese.train.filter(pl.col("homograph"))
                   .alias("similarity"))
               .filter(~pl.col("similarity").is_infinite())
               )
-              
+
 print(homographs.select(pl.col("similarity")).describe())
 
 sns.histplot(data=homographs, x="similarity")
-plt.savefig("results/puntuguese_similarity_dist.png")
+plt.savefig("results/img/puntuguese_similarity_dist.png")
