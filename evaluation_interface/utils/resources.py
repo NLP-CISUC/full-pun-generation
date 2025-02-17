@@ -18,12 +18,6 @@ def load_data():
     return pl.read_ndjson(data_path)
 
 
-@st.cache_data
-def load_custom_style():
-    cfg = load_config()
-    style_path = INTERFACE_ROOT / cfg["paths"]["style"]
-    return style_path.read_text()
-
 def get_results_path(username):
     cfg = load_config()
     results_path = INTERFACE_ROOT / cfg["paths"]["results"] / f"{username}.jsonl"

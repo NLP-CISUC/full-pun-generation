@@ -1,15 +1,14 @@
 paths:
   data: "../data/evaluation.jsonl"
-  results: "../results/evaluation.jsonl"
-  style: "config/style.css"
+  results: "../results/evaluation"
 splits:
   admin:
+    - 9
+    - 10
+    - 11
+    - 12
+  hugo:
     - 1
     - 2
     - 3
     - 4
-  hugo:
-    - 5
-    - 6
-    - 7
-    - 8

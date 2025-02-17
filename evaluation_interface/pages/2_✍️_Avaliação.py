@@ -1,7 +1,12 @@
 import polars as pl
 import streamlit as st
-from streamlit_sortables import sort_items
-from utils import get_results_path, load_config, load_custom_style, load_data
+from utils import get_results_path, load_config, load_data
+from streamlit.components.v1 import html
+
+if "username" not in st.session_state or st.session_state.username is None:
+    st.error("Por favor, faça login primeiro.")
+    st.stop()
+
 
 username = st.session_state.username
 cfg = load_config()
@@ -20,18 +25,15 @@ def format_headline():
 
 def update_jokes():
     cur_headline = st.session_state.cur_headline
-    if ("results" in st.session_state and
-        cur_headline in st.session_state.results["headline_id"]):
-        cur_jokes = (st.session_state.results.filter(pl.col("headline_id") == cur_headline))
-        st.session_state.cur_fun_rank = cur_jokes.sort("funniness rank")["generated"].to_list()
-        st.session_state.cur_sim_rank = cur_jokes.sort("similarity rank")["generated"].to_list()
+    if cur_headline in st.session_state.jokes_by_headline:
+        jokes = st.session_state.jokes_by_headline[cur_headline]
     else:
         jokes = (df.filter(pl.col("headline_id") == cur_headline)["generated"]
                  .unique()
                  .sample(fraction=1, shuffle=True)
                  .to_list())
-        st.session_state.cur_fun_rank = jokes
-        st.session_state.cur_sim_rank = jokes
+        st.session_state.jokes_by_headline[cur_headline] = jokes
+    st.session_state.cur_jokes = jokes
 
 
 def update_current_headline():
@@ -42,94 +44,147 @@ def decrease_index():
     st.session_state.cur_idx -= 1
     update_current_headline()
     update_jokes()
+    st.session_state.scroll_to_top = True
 
 
 def increase_index():
     st.session_state.cur_idx += 1
     update_current_headline()
     update_jokes()
+    st.session_state.scroll_to_top = True
+
+
+def set_show_success():
+    st.session_state.show_success = True
+
+
+def update_rates():
+    fun_rates, rel_rates = [], []
+    for i in range(len(st.session_state.cur_jokes)):
+        fun = st.session_state[f"slider_fun_{st.session_state.cur_headline}_{i}"]
+        rel = st.session_state[f"slider_rel_{st.session_state.cur_headline}_{i}"]
+        fun_rates.append(fun)
+        rel_rates.append(rel)
+    st.session_state.rates[st.session_state.cur_headline] = {
+        "funniness": fun_rates,
+        "relation": rel_rates
+    }
 
 
 #
 # ------ Initialize state ------
 #
-if "results" not in st.session_state and results_path.exists():
-    st.session_state.results = pl.read_ndjson(results_path)
+if "rates" not in st.session_state:
+    st.session_state.rates = {}
+if "results_df" not in st.session_state and results_path.exists():
+    st.session_state.results_df = pl.read_ndjson(results_path)
 if "cur_idx" not in st.session_state:
     st.session_state.cur_idx = 0
 if "cur_headline" not in st.session_state:
     st.session_state.cur_headline = splits[username][st.session_state.cur_idx]
-if "funiness_ranks" not in st.session_state or "similarity_ranks" not in st.session_state:
+if "show_success" not in st.session_state:
+    st.session_state.show_success = False
+if "scroll_to_top" not in st.session_state:
+    st.session_state.scroll_to_top = False
+if "jokes_by_headline" not in st.session_state:
+    st.session_state.jokes_by_headline = {}
+if "cur_jokes" not in st.session_state:
     update_jokes()
 
 
 #
 # ------ Streamlit page ------
 #
-with st.container(height=121, border=False):
-    st.markdown(f"<p style=\"font-size:28px\">{format_headline()}</p>",
-                unsafe_allow_html=True)
+if st.session_state.scroll_to_top:
+    html(f"""
+    <script>
+        console.log("Scrolling to top");
+        var element = window.parent.document.querySelector(".stMainBlockContainer");
+        element.scrollIntoView({{ behavior: 'smooth', block: 'start' }});
+    </script>
+    <!-- Unique marker: {st.session_state.cur_idx} -->
+    """, height=0)
+    st.session_state.scroll_to_top = False
 
-col1, col2 = st.columns(2, gap="large", border=True)
-list_style = load_custom_style()
-with col1:
-    st.markdown("<p style=\"font-size:21px\">Qual piada <strong>tem mais piada</strong>?<p>",
-                unsafe_allow_html=True)
-    sort_items(st.session_state.cur_fun_rank, "",
-               custom_style=list_style,
-               direction="vertical",
-               key=f"fun_rank_{st.session_state.cur_headline}")
-with col2:
-    st.markdown("<p style=\"font-size:21px\">Qual piada <strong>mais se relaciona</strong> com o título?<p>",
-                unsafe_allow_html=True)
-    sort_items(st.session_state.cur_sim_rank, "",
-               custom_style=list_style,
-               direction="vertical",
-               key=f"sim_rank_{st.session_state.cur_headline}")
 
-_, btn_col2, btn_col3, _ = st.columns([0.4, 0.1, 0.1, 0.4])
-with btn_col2:
+if st.session_state.show_success:
+    st.success("Avaliação concluída! Muito obrigado por participar! :smile:")
+    st.stop()
+
+header = st.container()
+header.title(format_headline(), anchor="headline")
+header.write("""<div class='fixed-header'/>""", unsafe_allow_html=True)
+st.markdown(
+    """
+<style>
+    div[data-testid="stVerticalBlock"] div:has(div.fixed-header) {
+        position: sticky;
+        top: 2.875rem;
+        background-color: #F5F5F5;
+        z-index: 999;
+    }
+    .fixed-header {
+        border-bottom: 1px solid #333333;
+    }
+</style>
+    """,
+    unsafe_allow_html=True
+)
+
+for i in range(len(st.session_state.cur_jokes)):
+    try:
+        default_fun = st.session_state.rates[st.session_state.cur_headline]["funniness"][i]
+        default_rel = st.session_state.rates[st.session_state.cur_headline]["relation"][i]
+    except (KeyError, IndexError):
+        default_fun = "Não tem piada"
+        default_rel = "Não tem relação"
+
+    with st.container(border=True):
+        st.markdown(f"<p style=\"font-size:21px\">{st.session_state.cur_jokes[i]}</p>",
+                    unsafe_allow_html=True)
+        col1, col2 = st.columns(2, gap="large")
+        with col1:
+            st.select_slider("Qual o nível de piada?",
+                             ["Não tem piada", "Tem pouca piada",
+                              "Tem piada", "Tem muita piada"],
+                             value=default_fun,
+                             key=f"slider_fun_{st.session_state.cur_headline}_{i}",
+                             label_visibility="hidden",
+                             on_change=update_rates)
+        with col2:
+            st.select_slider("A piada tem relação com a notícia?",
+                             ["Não tem relação", "Tem pouca relação",
+                              "Tem relação", "Tem muita relação"],
+                             value=default_rel,
+                             key=f"slider_rel_{st.session_state.cur_headline}_{i}",
+                             label_visibility="hidden",
+                             on_change=update_rates)
+
+btn_col1, _, btn_col2 = st.columns([1, 3, 1])
+with btn_col1:
     first_example = (st.session_state.cur_idx == 0)
-    st.button("Anterior", disabled=first_example, on_click=decrease_index)
-with btn_col3:
+    st.button("Anterior", disabled=first_example,
+              on_click=decrease_index,
+              use_container_width=True)
+with btn_col2:
     last_example = (st.session_state.cur_idx == len(splits[username]) - 1)
-    st.button("Próximo", disabled=last_example, on_click=increase_index)
+    if not last_example:
+        st.button("Próximo", on_click=increase_index, use_container_width=True)
+    else:
+        st.button("Concluir", type="primary", on_click=set_show_success,
+                  use_container_width=True)
+
 
 #
 # ------ Consolidate and save results ------
 #
-if st.session_state[f"fun_rank_{st.session_state.cur_headline}"] is None:
-    funniness = st.session_state.cur_fun_rank
-else:
-    funniness = st.session_state[f"fun_rank_{st.session_state.cur_headline}"][0]["items"]
-if st.session_state[f"sim_rank_{st.session_state.cur_headline}"] is None:
-    similarity = st.session_state.cur_sim_rank
-else:
-    similarity = st.session_state[f"sim_rank_{st.session_state.cur_headline}"][0]["items"]
+if st.session_state.rates:
+    rates = [(pl.DataFrame(st.session_state.rates[headline_id])
+              .with_columns(pl.lit(headline_id).alias("headline_id"),
+                            pl.lit(username).alias("evaluator"),
+                            pl.Series(st.session_state.jokes_by_headline[headline_id]).alias("generated")))
+             for headline_id in st.session_state.rates]
+    rates = pl.concat(rates)
 
-funniness_df = (pl.DataFrame({"generated": funniness})
-                .with_row_index("funniness rank"))
-similarity_df = (pl.DataFrame({"generated": similarity})
-                 .with_row_index("similarity rank"))
-results_df = (funniness_df.join(similarity_df, on="generated")
-              .join(df.filter(pl.col("headline_id") == st.session_state.cur_headline),
-                    left_on="generated", right_on="generated")
-              .select([pl.lit(username).alias("evaluator"),
-                       "headline_id",
-                       "headline",
-                       "model",
-                       "generated",
-                       "pun sign",
-                       "alternative sign",
-                       "funniness rank",
-                       "typicality",
-                       "similarity rank",
-                       "similarity"]))
-
-if "results" in st.session_state:
-    results_df = st.session_state.results.update(results_df,
-                                                 on=["headline_id",
-                                                     "generated"],
-                                                 how="full")
-st.session_state.results = results_df
-st.session_state.results.write_ndjson(results_path)
+    st.session_state.results_df = df.join(rates, on=["headline_id", "generated"])
+    st.session_state.results_df.write_ndjson(results_path)

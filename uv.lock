@@ -1075,7 +1075,7 @@ dependencies = [
     { name = "spacy" },
     { name = "streamlit" },
     { name = "streamlit-authenticator" },
-    { name = "streamlit-sortables" },
+    { name = "streamlit-scroll-to-top" },
     { name = "tiktoken" },
     { name = "torch" },
     { name = "transformers", extra = ["torch"] },
@@ -1112,7 +1112,7 @@ requires-dist = [
     { name = "spacy", specifier = "==3.8.3" },
     { name = "streamlit", specifier = ">=1.42.0" },
     { name = "streamlit-authenticator", specifier = ">=0.4.1" },
-    { name = "streamlit-sortables", specifier = ">=0.3.1" },
+    { name = "streamlit-scroll-to-top", specifier = ">=0.0.4" },
     { name = "tiktoken", specifier = ">=0.8.0" },
     { name = "torch", specifier = ">=2.5.1" },
     { name = "transformers", extras = ["torch"], specifier = ">=4.47.0" },
@@ -4021,15 +4021,15 @@ wheels = [
 ]
 
 [[package]]
-name = "streamlit-sortables"
-version = "0.3.1"
+name = "streamlit-scroll-to-top"
+version = "0.0.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "streamlit" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/11/10/00c3ae0f183d41bb3608157283a2c92e4f4db87cb21a73e96b3c2c2ca58f/streamlit_sortables-0.3.1.tar.gz", hash = "sha256:9bed78f4407f2b9b1ddead8b6459d1af839aab427b7b5fe4c091e6870630acfe", size = 564139 }
+sdist = { url = "https://files.pythonhosted.org/packages/d2/06/26f13270ea77f0fddec15b11955dad1c1130897c87f6a4c3040221051ef7/streamlit_scroll_to_top-0.0.4.tar.gz", hash = "sha256:148bbaa31ca91444a94d4b1f846bcdc0de5f6b2eccaf9e815805754892a9d7f6", size = 402901 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/3d/b4/edbef9fa8e49f5df2745a178c44b23553d8472c22fb23f44f6949d544410/streamlit_sortables-0.3.1-py3-none-any.whl", hash = "sha256:1847b2fa2041762b6442e21224bd8c0316c5412e4eb3a38fa748cf7ced834d49", size = 570356 },
+    { url = "https://files.pythonhosted.org/packages/ce/89/9099f3c5fab4b7ecef73a16bb80a59d6501d5b8ae904df162700460d15e1/streamlit_scroll_to_top-0.0.4-py3-none-any.whl", hash = "sha256:4e894ee1377fd0d65c799c39463d382d9a72fb9c592dde566ea3f6c109154128", size = 2273951 },
 ]
 
 [[package]]
