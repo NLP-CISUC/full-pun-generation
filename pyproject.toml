@@ -5,6 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
+    "altair>=5.5.0",
     "datasets>=3.2.0",
     "editdistance>=0.8.1",
     "full-pun-generation",
@@ -12,6 +13,7 @@ dependencies = [
     "gradio>=4.44.1",
     "huggingface-hub>=0.27.0",
     "keybert>=0.8.5",
+    "krippendorff>=0.8.1",
     "langchain-community>=0.3.16",
     "langchain-ollama>=0.2.3",
     "langchain>=0.3.16",
@@ -30,6 +32,7 @@ dependencies = [
     "tiktoken>=0.8.0",
     "torch>=2.5.1",
     "transformers[torch]>=4.47.0",
+    "vl-convert-python>=1.7.0",
     "wandb>=0.19.6",
 ]
 
