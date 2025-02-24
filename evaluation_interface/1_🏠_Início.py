@@ -24,7 +24,7 @@ if st.session_state.authentication_status:
 
     Obrigado por ter aceitado em participar desta avaliação. O objetivo é analisar a qualidade de piadas geradas automaticamente a partir de títulos de notícias.
 
-    Essa avaliação esta estuturada da seguinte forma. Você receberá um máximo de 5 noticias, uma por vez, em uma página com o título no topo e 10 piadas listadas abaixo. Cada piada possui duas escalas, correspondentes aos critérios abaixo. Para realizar a avaliação, você deverá selecionar o valor correspondente à sua percepção de acordo com o critério.
+    Essa avaliação está estruturada da seguinte forma. Você receberá um máximo de 5 notícias, uma por vez, em uma página com o título no topo e 10 piadas listadas abaixo. Cada piada possui duas escalas, correspondentes aos critérios abaixo. Para realizar a avaliação, você deverá selecionar o valor correspondente à sua percepção de acordo com o critério.
 
     As escalas seguem dois critérios diferentes:
     - **Nível de humor** (escala da **esquerda**)
